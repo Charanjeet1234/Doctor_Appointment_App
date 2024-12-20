@@ -1,6 +1,6 @@
 import React from 'react'
 
-function MyAppointment() {
+const MyAppointment = () => {
   return (
     <div>MyAppointment</div>
   )
