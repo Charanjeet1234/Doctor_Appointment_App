@@ -21,9 +21,6 @@ app.use(cors());
 app.use('/api/admin', adminRouter)
 // localhost:4000/api/admin/add-doctor
 
-
-
-
 app.get("/", (req, res) => {
     res.send("Hello from the server ! API is working");
 })
