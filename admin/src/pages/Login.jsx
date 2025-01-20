@@ -1,8 +1,22 @@
-import React from 'react'
-
+import React, {useState} from 'react'
+import { assets } from '../assets/assets'
 const Login = () => {
+    const [state, setState] = useState('Admin')
   return (
-    <div>login</div>
+    <form>
+    <div>
+        <p><span>{state}</span>Login</p>
+        <div>
+            <p>Email</p>
+            <input type="email" required />
+        </div>
+        <div>
+            <p>Password</p>
+            <input type="password" required />
+        </div>
+        <button>Login</button>
+    </div>
+    </form>
   )
 }
 
