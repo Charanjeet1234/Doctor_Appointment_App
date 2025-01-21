@@ -8,6 +8,7 @@ import Dashboard from './pages/Admin/Dashboard';
 import AllAppointments from './pages/Admin/AllAppointments';
 import AddDoctor from './pages/Admin/AddDoctor';
 import DoctorsList from './pages/Admin/DoctorsList';
+import { Routes, Route } from'react-router-dom';
 const App = () => {
   const {aToken} = useContext(AdminContext)
 
@@ -15,7 +16,7 @@ const App = () => {
     <div className='bg-[#f8f9fd]'>
       <ToastContainer />
       <Navbar />
-     <div>
+     <div className='flex items-start'>
       <Sidebar />
       <Routes>
         <Route path ="/" element={<></>} />
