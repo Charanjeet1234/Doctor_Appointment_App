@@ -16,7 +16,6 @@ const addDoctor = async (req, res) => {
       about,
       fees,
       address,
-
     } = req.body;
     const imageFile = req.file;
       console.log({imageFile, name, email, password, speciality, degree, experience, about, fees, address})
@@ -105,7 +104,22 @@ const loginAdmin = async (req, res) =>
         res.status(500).json({ success: false, message: error.message });
     }
 }
-export { addDoctor, loginAdmin };
+
+// API for getting all doctors
+
+const allDoctors = async (req,res) =>
+{
+    try {
+         const doctor = await doctorModel.find({}).select('-password') // .select('-password ) will remove the password property from the doctor response
+         res.json({ success: true, doctor });
+        }
+    catch(error)
+    {
+        console.error(error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+}
+export { addDoctor, loginAdmin, allDoctors };
 
 
 
