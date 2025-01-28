@@ -34,12 +34,35 @@ const getAllDoctors = async () =>
         console.error(error)
     }
 }
+
+// Chnage doctor availablity with api
+
+const changeAvailability = async (docId) =>
+{
+    try{
+        const {data} = await axios.post(backendUrl + '/api/admin/change-availablity', {docId}, {headers: {aToken}})
+        if(data.success)
+        {
+            toast.success(data.message)
+            getAllDoctors() // Update the data if the availablity change
+        }
+        else{
+            toast.error(data.message)
+        }
+    }
+    catch(error)
+    {
+        toast.error(error.message)
+        console.error(error)
+    }
+}
     const value = {
        aToken, 
        setAToken, 
        backendUrl,
        doctors,
-       getAllDoctors
+       getAllDoctors,
+       changeAvailability
     }
     return (
         <AdminContext.Provider value={value}>
