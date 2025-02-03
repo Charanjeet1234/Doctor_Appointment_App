@@ -2,9 +2,44 @@ import React, { useContext } from "react";
 import { useState } from "react";
 import { assets } from "../assets/assets";
 import { AppContext } from "../context/AppContext";
-
+import { toast } from "react-toastify";
+import axios from "axios";
 const MyProfile = () => {
-  const {userData, setUserData} = useContext(AppContext)
+  const {userData, setUserData, token, backendUrl, loadUserProfileData} = useContext(AppContext)
+  const [isEdit, setIsEdit] = useState(false);
+  const [image, setImage] = useState(false)
+  const updateUserProfileData = async () =>
+  {
+    try {
+      const formData = new FormData()
+      formData.append('name', userData.name)
+      formData.append('phone', userData.phone)
+      formData.append('address', JSON.stringify(userData.address))
+      formData.append('gender', userData.gender)
+      formData.append('dob', userData.dob)
+
+      image && formData.append('image',image)
+
+      const {data} = await axios.post(backendUrl + '/api/user/update-profile', formData,{headers:{token}})
+
+      if (data.success)
+      {
+        await loadUserProfileData()
+        setIsEdit(false) 
+        setImage(false)
+        toast.success(data.message)
+      }
+      else
+      {
+        toast.error(data.message)
+      }
+
+    }catch(error)
+    {
+      console.log(error)
+      toast.error(error.message)
+    }
+  }
 
   // const [userData, setUserData] = useState({
   //   name: "Edward Vincent",
@@ -19,10 +54,15 @@ const MyProfile = () => {
   //   gender: "Male",
   // });
 
-  const [isEdit, setIsEdit] = useState(false);
+ 
   return userData && (
     <div className="max-w-lg flex flex-col gap-2 text-sm">
+      {isEdit ? <label htmlFor="image"><div className="inline-block relative cursor-pointer">
+        <img className="w-36 rounded opacity-75" src={image ? URL.createObjectURL(image) : userData.image} alt="" />
+        <img className="w-10 absolute bottom-12 right-12"  src={image ? '' : assets.upload_icon} alt="" />
+        <input onChange={(e)=>setImage(e.target.files[0])} type="file" name="" id="image" hidden /></div> </label> :
       <img className=" w-36 rounded" src={userData.image} alt="" />
+    }
       {isEdit ? (
         <input
           className="bg-gray-50 text-3xl font-medium max-w-60 mt-4"
@@ -63,8 +103,7 @@ const MyProfile = () => {
                 className="bg-gray-50"
                 onChange={(e) =>
                   setUserData((prev) => ({
-                    ...prev.address,
-                    line1: e.target.value,
+                    ...prev, address:{...prev.address,line1: e.target.value}
                   }))
                 }
                 value={userData.address.line1}
@@ -73,10 +112,9 @@ const MyProfile = () => {
               <br />
               <input
                 className="bg-gray-50"
-                nChange={(e) =>
+                onChange={(e) =>
                   setUserData((prev) => ({
-                    ...prev.address,
-                    line1: e.target.value,
+                    ...prev, address: {...prev.address, line2: e.target.value,},
                   }))
                 }
                 value={userData.address.line2}
@@ -130,7 +168,7 @@ const MyProfile = () => {
         {isEdit ? (
           <button
             className="border border-primary px-8 py-2 rounded-full hover:bg-primary hover:text-white transition-all"
-            onClick={() => setIsEdit(false)}
+            onClick={updateUserProfileData}
           >
             Save Information
           </button>
