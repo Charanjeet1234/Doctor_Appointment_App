@@ -110,4 +110,6 @@ const updateProfile = async (req, res) =>
         res.status(500).json({ success: false, message: error.message })
     }
 }
+
+
 export { registerUser, loginUser, getProfile, updateProfile };
