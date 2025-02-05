@@ -318,6 +318,15 @@ try{
 // Retrieve session details from Stripe
 const session = await stripe.checkout.sessions.retrieve(sessionId);
 console.log("Payment Session", session)
+if(session.status === "paid")
+{
+  await appointmentModel.findByIdAndUpdate(session.sessionId, {payment:true})
+  res.json({ success: true, message: "Payment successful" });
+}
+else
+{
+  res.json({ success: false, message: "Payment failed" });
+}
 
 res.json({
   success: true,
