@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { AppContext } from "../context/AppContext";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { loadStripe } from "@stripe/stripe-js";
 const MyAppointment = () => {
   // const { doctors } = useContext(AppContext)
   const { backendUrl, token, getDoctorsData } = useContext(AppContext);
@@ -55,13 +56,75 @@ const MyAppointment = () => {
       if (data.success) {
         toast.success(data.message);
         getUserAppointments();
-        getDoctorsData()
+        getDoctorsData();
       } else {
         toast.error(data.message);
       }
     } catch (error) {
       console.log(error);
       toast.error(error.message);
+    }
+  };
+
+  
+ 
+  //    const options = {
+  //     key:import.meta.env.VITE_STRIPE_KEY_ID,
+  //     amount: order.amount,
+  //     currency:order.currency,
+  //     name:"Appointment Payment",
+  //     description:"Appointment Payment",
+  //     order_id:order.id,
+  //     receipt:order.receipt,
+  //     handler:async (response) =>
+  //     {
+  //       console.log(response)
+  //     }
+  //    }
+  //    const rzp = new window.Razorpay(options)
+  //    rzp.open()
+  // };
+
+  const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_KEY_ID);
+
+  const initPay = async (order) => {
+    try {
+      const stripe = await stripePromise;
+      if (!stripe) {
+        console.error("Stripe failed to load.");
+        return;
+      }
+  
+      // Call your backend to create a Stripe Checkout Session
+      const response = await axios.post(backendUrl + "/api/user/stripe-checkout", {order}, {headers:{token}});
+  
+      if (response.data.success) {
+        // Redirect user to Stripe Checkout
+        console.log(response.data)
+        const result = await stripe.redirectToCheckout({
+          sessionId: response.data.sessionId,
+        });
+  
+        if (result.error) {
+          console.error(result.error.message);
+        }
+      } else {
+        console.error("Failed to create Stripe session.");
+      }
+    } catch (error) {
+      console.error("Payment initiation error:", error);
+    }
+  };
+  
+  const appointmentStripePay = async (appointmentId) => {
+    const { data } = await axios.post(
+      backendUrl + "/api/user/payment-stripe",
+      { appointmentId },
+      { headers: { token } }
+    );
+    if (data.success) {
+      console.log(data.order);
+      initPay(data.order);
     }
   };
 
@@ -106,7 +169,10 @@ const MyAppointment = () => {
             <div></div>
             <div className="flex flex-col gap-2 justify-end">
               {!item.cancelled && (
-                <button className="text-sm text-stone-500 text-center sm:min-w-48 py-2 border rounded hover:bg-primary hover:text-white transition-all duration-300">
+                <button
+                  onClick={() => appointmentStripePay(item._id)}
+                  className="text-sm text-stone-500 text-center sm:min-w-48 py-2 border rounded hover:bg-primary hover:text-white transition-all duration-300"
+                >
                   Pay Online
                 </button>
               )}

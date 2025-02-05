@@ -5,6 +5,9 @@ import jwt from "jsonwebtoken";
 import { v2 as cloudinary } from "cloudinary";
 import doctorModel from "../models/doctorModel.js";
 import appointmentModel from "../models/appointmentModel.js";
+import Stripe from "stripe"
+// import razor from "razor
+
 
 // API to register user
 
@@ -210,4 +213,92 @@ const cancelAppointment = async (req, res) =>
     res.status(500).json({ success: false, message: error.message });
   }
 }
-export { registerUser, loginUser, getProfile, updateProfile, bookAppointment,listAppointment, cancelAppointment };
+
+// const stripepayInstance = new ({
+// key_id: process.env.STRIPE_KEY_ID,
+// key_secret:process.env.STRIPE_SECRET_KEY,
+
+// })
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// APi to male payment of appointment using stripe pay
+const paymentStripePay = async (req,res) =>
+{
+  try
+  {
+    const {appointmentId} = req.body
+ const appointmentData = await appointmentModel.findById(appointmentId)
+ if(!appointmentData || appointmentData.cancelled)
+ {
+  return res.json({ success: false, message: "Appointment not found or cancelled" });
+ }
+
+ // creating options for Razor pay
+//  const options = {
+//   amount:appointmentData.amount * 100,
+//   currency: process.env.CURRENCY,
+//   receipt: appointmentId, 
+//  }
+
+//  creation of an order
+// const order = await stripe.paymentIntents.create(options)
+// res.json({ success: true, order, clientSecret: order.client_secret })
+
+const order = await stripe.paymentIntents.create({
+  amount:appointmentData.amount * 100,
+  currency: process.env.CURRENCY,
+  metadata: {appointmentId}, 
+})
+ res.json({ success: true, order, clientSecret: order.client_secret })
+     
+  }catch(err)
+  {
+    console.error(err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+// API for stripe scheckout
+const stripeCheckout = async (req,res) =>
+{
+  try{
+     const { order } = req.body
+     // Debug: Check if order exists and has the required properties
+    console.log("Received Order:", order);
+
+    if (!order || !order.amount || !order.currency) {
+      return res.status(400).json({ success: false, message: "Invalid order data" });
+    }
+
+     const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price_data: {
+            currency: order.currency,
+            product_data: {
+              name: "Appointment Payment",
+              description: "Payment for appointment",
+            },
+            unit_amount: order.amount * 100, // Convert to cents
+          },
+          quantity: 1,
+        },
+      ],
+      mode: "payment",
+      // success_url: `${process.env.CLIENT_URL}/success`,
+      // cancel_url: `${process.env.CLIENT_URL}/cancel`,
+      success_url: `${process.env.CLIENT_URL}/`,
+      cancel_url: `${process.env.CLIENT_URL}/cancel`,
+    });
+
+    res.json({ success: true, sessionId: session.id });
+  }catch(error)
+  {
+    console.error("Stripe Checkout error",error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+}
+
+
+export { registerUser, loginUser, getProfile, updateProfile, bookAppointment,listAppointment, cancelAppointment,paymentStripePay,stripeCheckout };
