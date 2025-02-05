@@ -288,11 +288,11 @@ const stripeCheckout = async (req,res) =>
       mode: "payment",
       // success_url: `${process.env.CLIENT_URL}/success`,
       // cancel_url: `${process.env.CLIENT_URL}/cancel`,
-      success_url: `${process.env.CLIENT_URL}/`,
-      cancel_url: `${process.env.CLIENT_URL}/cancel`,
+      success_url: `${process.env.CLIENT_URL}my-appointments?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.CLIENT_URL}my-appointments`,
     });
 
-    res.json({ success: true, sessionId: session.id });
+    res.json({ success: true, sessionId: session.id, order });
   }catch(error)
   {
     console.error("Stripe Checkout error",error);
@@ -300,5 +300,34 @@ const stripeCheckout = async (req,res) =>
   }
 }
 
+// API to verify payment of stripe and razor pay
 
-export { registerUser, loginUser, getProfile, updateProfile, bookAppointment,listAppointment, cancelAppointment,paymentStripePay,stripeCheckout };
+const verifyStripepay = async (req, res) =>
+{
+try{
+  // const {razorpay_order_id} = req.body  ---- for razor pay
+
+  // for stripe pay
+  const { sessionId } = req.body
+  console.log("SessionId", sessionId)
+
+  if(!sessionId)
+  {
+    return res.status(400).json({ success: false, message: "Invalid session id" });
+  }
+// Retrieve session details from Stripe
+const session = await stripe.checkout.sessions.retrieve(sessionId);
+console.log("Payment Session", session)
+
+res.json({
+  success: true,
+  payment_id: session.payment_intent,
+  status: session.payment_status,
+});
+} catch (error) {
+console.error("❌ Error retrieving payment details:", error);
+res.status(500).json({ success: false, message: error.message });
+}
+}
+
+export { registerUser, loginUser, getProfile, updateProfile, bookAppointment,listAppointment, cancelAppointment,paymentStripePay,stripeCheckout,verifyStripepay };

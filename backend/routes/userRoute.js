@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, loginUser, getProfile, updateProfile, bookAppointment,listAppointment,cancelAppointment,paymentStripePay,stripeCheckout } from '../controllers/userController.js';
+import { registerUser, loginUser, getProfile, updateProfile, bookAppointment,listAppointment,cancelAppointment,paymentStripePay,stripeCheckout,verifyStripepay } from '../controllers/userController.js';
 import authUser from '../middlewares/authUser.js';
 import upload from '../middlewares/multer.js';
 
@@ -16,5 +16,7 @@ userRouter.post('/cancel-appointment', authUser, cancelAppointment)
 userRouter.post('/payment-stripe', authUser, paymentStripePay)
 userRouter.post('/stripe-checkout', authUser, stripeCheckout)
 // userRouter.post('/stripe-checkout', authUser, razorPayCheckout)
+userRouter.post('/verify-payment', authUser, verifyStripepay)
+
 export default userRouter;
 

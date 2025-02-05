@@ -7,6 +7,7 @@ const MyAppointment = () => {
   // const { doctors } = useContext(AppContext)
   const { backendUrl, token, getDoctorsData } = useContext(AppContext);
   const [appointments, setAppointments] = useState([]);
+  const [paymentInfo, setPaymentInfo] = useState(null);
   const months = [
     "",
     "Jan",
@@ -66,8 +67,6 @@ const MyAppointment = () => {
     }
   };
 
-  
- 
   //    const options = {
   //     key:import.meta.env.VITE_STRIPE_KEY_ID,
   //     amount: order.amount,
@@ -94,17 +93,21 @@ const MyAppointment = () => {
         console.error("Stripe failed to load.");
         return;
       }
-  
+
       // Call your backend to create a Stripe Checkout Session
-      const response = await axios.post(backendUrl + "/api/user/stripe-checkout", {order}, {headers:{token}});
-  
+      const response = await axios.post(
+        backendUrl + "/api/user/stripe-checkout",
+        { order },
+        { headers: { token } }
+      );
+
       if (response.data.success) {
         // Redirect user to Stripe Checkout
-        console.log(response.data)
+        console.log(response.data);
         const result = await stripe.redirectToCheckout({
           sessionId: response.data.sessionId,
         });
-  
+
         if (result.error) {
           console.error(result.error.message);
         }
@@ -115,7 +118,34 @@ const MyAppointment = () => {
       console.error("Payment initiation error:", error);
     }
   };
-  
+
+   // Fetch payment details after successful redirect from Stripe
+  const fetchPaymentDetails = async (sessionId) => {
+    try {
+      const { data } = await axios.post(
+        backendUrl + "/api/user/verify-payment",
+        { sessionId },
+        { headers: { token } }
+      );
+      console.log("payment Status:", data);
+      setPaymentInfo(data);
+      console.log(data);
+    } catch (error) {
+      setError("Failed to fetch payment details.");
+    } finally {
+    }
+  };
+
+  useEffect(() => {
+    const sessionId = new URLSearchParams(window.location.search).get(
+      "session_id"
+    );
+    if (sessionId) {
+      fetchPaymentDetails(sessionId);
+    }
+  }, []);
+
+
   const appointmentStripePay = async (appointmentId) => {
     const { data } = await axios.post(
       backendUrl + "/api/user/payment-stripe",
