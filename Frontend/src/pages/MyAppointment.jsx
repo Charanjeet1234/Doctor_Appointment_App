@@ -3,6 +3,7 @@ import { AppContext } from "../context/AppContext";
 import { toast } from "react-toastify";
 import axios from "axios";
 import { loadStripe } from "@stripe/stripe-js";
+import { useNavigate } from "react-router-dom";
 const MyAppointment = () => {
   // const { doctors } = useContext(AppContext)
   const { backendUrl, token, getDoctorsData } = useContext(AppContext);
@@ -23,7 +24,7 @@ const MyAppointment = () => {
     "Nov",
     "Dec",
   ];
-
+const navigate = useNavigate()
   const slotDateFormat = (slotDate) => {
     const dateArray = slotDate.split("_");
     return (
@@ -100,8 +101,13 @@ const MyAppointment = () => {
         { order },
         { headers: { token } }
       );
-
+      if(!OverconstrainedError.appointmentId)
+      {
+        console.error("❌ appointmentId is missing before sending to backend!");
+      }
+       console.log(order)
       if (response.data.success) {
+        getUserAppointments()
         // Redirect user to Stripe Checkout
         console.log(response.data);
         const result = await stripe.redirectToCheckout({
@@ -122,18 +128,19 @@ const MyAppointment = () => {
    // Fetch payment details after successful redirect from Stripe
   const fetchPaymentDetails = async (sessionId) => {
     try {
-      const { data } = await axios.post(
-        backendUrl + "/api/user/verify-payment",
-        { sessionId },
-        { headers: { token } }
-      );
-      console.log("payment Status:", data);
-      setPaymentInfo(data);
+      const { data } = await axios.post(backendUrl + "/api/user/verify-payment", { sessionId}, { headers: { token } });
+      if(data.success)
+      {
+        setPaymentInfo(data)
+        console.log("payment Status:", data);
+      }
+     else{
+       toast.error("Failed to verify payment")
+     }
       console.log(data);
     } catch (error) {
-      setError("Failed to fetch payment details.");
-    } finally {
-    }
+      console.log("Failed to fetch payment details.");
+    } 
   };
 
   useEffect(() => {

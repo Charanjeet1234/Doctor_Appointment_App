@@ -226,7 +226,7 @@ const paymentStripePay = async (req,res) =>
 {
   try
   {
-    const {appointmentId} = req.body
+    const { appointmentId } = req.body
  const appointmentData = await appointmentModel.findById(appointmentId)
  if(!appointmentData || appointmentData.cancelled)
  {
@@ -249,7 +249,8 @@ const order = await stripe.paymentIntents.create({
   currency: process.env.CURRENCY,
   metadata: {appointmentId}, 
 })
- res.json({ success: true, order, clientSecret: order.client_secret })
+console.log("order:", order)
+ res.json({ success: true, order, clientSecret: order.client_secret, paymentintentId: order.id  })
      
   }catch(err)
   {
@@ -282,6 +283,7 @@ const stripeCheckout = async (req,res) =>
             },
             unit_amount: order.amount * 100, // Convert to cents
           },
+          metadata: order.appointmentId,
           quantity: 1,
         },
       ],
@@ -302,41 +304,94 @@ const stripeCheckout = async (req,res) =>
 
 // API to verify payment of stripe and razor pay
 
-const verifyStripepay = async (req, res) =>
-{
-try{
-  // const {razorpay_order_id} = req.body  ---- for razor pay
+const verifyStripepay = async (req, res) => {
+  try {
+    const { sessionId } = req.body;
+    console.log("SessionId:", sessionId);
 
-  // for stripe pay
-  const { sessionId } = req.body
-  console.log("SessionId", sessionId)
+    if (!sessionId) {
+      return res.status(400).json({ success: false, message: "Invalid session ID" });
+    }
 
-  if(!sessionId)
-  {
-    return res.status(400).json({ success: false, message: "Invalid session id" });
+    // Retrieve session details from Stripe
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    console.log("Payment Session:", session);
+
+    // Retrieve the PaymentIntent to get metadata (appointmentId)
+    const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+    console.log("Payment Intent:", paymentIntent);
+
+    const appointmentId = paymentIntent.metadata.appointmentId; // Retrieve stored appointmentId
+
+    // if (appointmentId) {
+    //   return res.status(400).json({ success: false, message: "Appointment ID missing in payment metadata" });
+    // }
+
+    // Check if the payment is successful
+    if (session.payment_status === "paid" || session.status === "complete") {
+      // Update the appointment's payment status in the database
+      await appointmentModel.findByIdAndUpdate(appointmentId, { payment: true });
+
+      res.json({
+        success: true,
+        message: "Payment successful",
+        payment_id: session.payment_intent,
+        status: session.payment_status,
+        appointment_id: appointmentId, // Include the appointment ID in the response
+      });
+    } else {
+      res.json({ success: false, message: "Payment failed" });
+    }
+  } catch (error) {
+    console.error("❌ Error retrieving payment details:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
-// Retrieve session details from Stripe
-const session = await stripe.checkout.sessions.retrieve(sessionId);
-console.log("Payment Session", session)
-if(session.status === "paid")
-{
-  await appointmentModel.findByIdAndUpdate(session.sessionId, {payment:true})
-  res.json({ success: true, message: "Payment successful" });
-}
-else
-{
-  res.json({ success: false, message: "Payment failed" });
-}
+};
 
-res.json({
-  success: true,
-  payment_id: session.payment_intent,
-  status: session.payment_status,
-});
-} catch (error) {
-console.error("❌ Error retrieving payment details:", error);
-res.status(500).json({ success: false, message: error.message });
-}
-}
+
+// const verifyStripepay = async (req, res) =>
+// {
+// try{
+//   // const {razorpay_order_id} = req.body  ---- for razor pay
+
+//   // for stripe pay
+//   const { sessionId } = req.body
+//   console.log("SessionId:", sessionId)
+
+//   if(!sessionId)
+//   {
+//     return res.status(400).json({ success: false, message: "Invalid session id" });
+//   }
+// // Retrieve session details from Stripe
+// const session = await stripe.checkout.sessions.retrieve(sessionId);
+// console.log("Payment Session", session)
+
+// //  Retrieve the PaymentIntent to get metadata (appointmentId)
+// const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+// console.log("Payment Intent:", paymentIntent);
+// res.json({
+//   success: true,
+//   payment_id: session.payment_intent,
+//   status: session.payment_status,
+//   appointment_id: paymentIntent.metadata.appointmentId,  // Get the stored appointmentId
+// });
+// // Check if the payment was successful and the appointment was not cancelled
+// if(session.payment_status === "paid" || session.status === "paid")
+// {
+//   await appointmentModel.findByIdAndUpdate(session.appointmentId, {payment:true})
+//   res.json({ success: true, message: "Payment successful", payment_id: session.payment_intent, status: session.payment_status});
+// }
+// else
+// {
+//   res.json({ success: false, message: "Payment failed" });
+// }
+// } catch (error) {
+// console.error("❌ Error retrieving payment details:", error);
+// res.status(500).json({ success: false, message: error.message });
+// }
+// }
 
 export { registerUser, loginUser, getProfile, updateProfile, bookAppointment,listAppointment, cancelAppointment,paymentStripePay,stripeCheckout,verifyStripepay };
+
+
+// 4242 4242 4242 4242
